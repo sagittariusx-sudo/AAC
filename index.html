@@ -3,30 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AAC 漸凍症輔助溝通系統 - iPad 雙手/軌跡板優化版</title>
+    <title>AAC 漸凍症輔助溝通系統 (iPad 專用版)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            background-color: #080d1a; /* Dark navy background */
+            background-color: #0b1d3a; /* Deep navy blue background */
             color: #ffffff;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: manipulation;
+            touch-action: manipulation; /* Disable double-tap zoom on iPad */
             overflow: hidden;
         }
 
-        /* Active button feedback scale */
+        /* Hide scrollbars for smooth interface */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Active button feedback animation */
         .btn-press:active {
             transform: scale(0.96);
             transition: transform 0.08s ease-out;
         }
 
-        /* Interactive body part SVG hover / active highlight */
+        /* Custom SVG body zone highlight on hover/touch */
         .body-part-path {
             fill: #3b82f6;
-            fill-opacity: 0.3;
+            fill-opacity: 0.25;
             stroke: #60a5fa;
             stroke-width: 2;
             cursor: pointer;
@@ -34,149 +43,156 @@
         }
         .body-part-path:hover, .body-part-path:active {
             fill: #f59e0b;
-            fill-opacity: 0.65;
+            fill-opacity: 0.6;
             stroke: #fbbf24;
             stroke-width: 3;
         }
 
-        /* Custom 4-row strict grid layout */
-        .grid-rows-4-strict {
-            grid-template-rows: repeat(4, minmax(0, 1fr));
-        }
-
-        /* Notification Toast transition */
+        /* Custom Toast notification animation */
         #toast {
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col select-none overflow-hidden p-3 gap-3">
+<body class="h-screen w-screen flex flex-col select-none overflow-hidden">
 
-    <!-- Consolidated Top Toolbar -->
-    <header class="h-20 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center px-4 gap-3 shrink-0 shadow-lg">
-        <!-- Mode Switcher Button -->
-        <button id="btn-mode-toggle" class="h-14 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-lg font-bold btn-press shadow-md transition-colors flex items-center gap-2 shrink-0">
-            <span>📝 句子組合模式</span>
+    <!-- Top Display & Primary Speech Control Bar -->
+    <div class="h-20 bg-slate-900 border-b border-slate-700 flex items-center px-4 gap-3 shrink-0">
+        <!-- Interaction Mode Toggle Button -->
+        <button id="btn-mode-toggle" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-2xl text-lg font-bold btn-press shadow-md transition-colors whitespace-nowrap flex items-center gap-2">
+            📝 句子組合模式
         </button>
 
         <!-- Shortened Sentence Display Box -->
-        <div id="sentence-display" class="flex-1 h-14 bg-slate-100 text-slate-950 rounded-2xl px-5 text-2xl font-bold flex items-center overflow-x-auto whitespace-nowrap shadow-inner border-2 border-slate-300">
-            <!-- Dynamically chosen words buffer -->
+        <div id="sentence-display" class="flex-1 h-14 bg-slate-100 text-slate-900 rounded-2xl px-4 text-2xl font-bold flex items-center overflow-x-auto whitespace-nowrap shadow-inner border-2 border-slate-300">
+            <!-- Text dynamically inserted here -->
         </div>
         
         <!-- Action Buttons -->
-        <button id="btn-backspace" title="退格" class="h-14 w-16 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl text-2xl flex justify-center items-center btn-press shadow-lg shadow-amber-950/40 shrink-0">
+        <button id="btn-backspace" title="退格" class="h-14 w-16 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl text-2xl flex justify-center items-center btn-press shadow-lg shadow-amber-950/50 font-bold shrink-0">
             ⌫
         </button>
-        <button id="btn-clear" title="清空" class="h-14 w-16 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-2xl flex justify-center items-center btn-press shadow-lg shadow-rose-950/40 shrink-0">
+        <button id="btn-clear" title="清空" class="h-14 w-16 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-2xl flex justify-center items-center btn-press shadow-lg shadow-rose-950/50 font-bold shrink-0">
             🗑️
         </button>
-        <button id="btn-play" title="發音朗讀" class="h-14 w-32 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl text-2xl flex justify-center items-center btn-press shadow-lg shadow-emerald-950/40 gap-2 font-bold shrink-0">
-            🔊 <span>讀出</span>
+        <button id="btn-play" title="發音朗讀" class="h-14 px-5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl text-2xl flex justify-center items-center btn-press shadow-lg shadow-emerald-950/50 gap-2 font-bold shrink-0">
+            🔊 <span class="text-xl">讀出</span>
         </button>
-    </header>
+    </div>
 
-    <!-- Main Interactive Workspace -->
-    <main class="flex-1 flex overflow-hidden gap-3">
+    <!-- Main Interactive Area -->
+    <div class="flex-1 flex overflow-hidden p-3 gap-3">
         
-        <!-- Left Sidebar: Category Navigation with Top Pagination & Enlarged Thumb Rest Zone -->
-        <aside class="w-1/4 max-w-[240px] flex flex-col justify-between h-full bg-slate-900/80 rounded-3xl p-3 border border-slate-800 shrink-0">
+        <!-- Left Sidebar: Category List & Dedicated Thumb Rest Zone -->
+        <div class="w-1/4 max-w-[260px] flex flex-col gap-2 shrink-0">
             
-            <!-- Category Navigation -->
-            <div class="flex-1 flex flex-col overflow-hidden">
-                <!-- Sidebar Category Pagination Buttons -->
-                <div id="category-nav" class="grid grid-cols-2 gap-2 mb-3 shrink-0">
-                    <button id="btn-cat-prev" onclick="changeCategoryPage(-1)" class="h-12 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-2xl text-base font-bold btn-press border border-slate-700 disabled:opacity-30 disabled:pointer-events-none flex justify-center items-center shadow">
-                        ▲ 上頁
-                    </button>
-                    <button id="btn-cat-next" onclick="changeCategoryPage(1)" class="h-12 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-2xl text-base font-bold btn-press border border-slate-700 disabled:opacity-30 disabled:pointer-events-none flex justify-center items-center shadow">
-                        ▼ 下頁
-                    </button>
-                </div>
-
-                <!-- Category List Container -->
-                <div id="category-container" class="flex-1 flex flex-col gap-2 justify-start overflow-hidden">
-                    <!-- Categories dynamically generated here -->
-                </div>
+            <!-- Category Pagination Controls (Top of Sidebar) -->
+            <div class="flex gap-2 h-12">
+                <button id="btn-cat-prev" onclick="changeCategoryPage(-1)" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-xl font-bold text-lg flex items-center justify-center btn-press shadow-md disabled:opacity-30 disabled:pointer-events-none">
+                    ▲ 上頁
+                </button>
+                <button id="btn-cat-next" onclick="changeCategoryPage(1)" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 rounded-xl font-bold text-lg flex items-center justify-center btn-press shadow-md disabled:opacity-30 disabled:pointer-events-none">
+                    ▼ 下頁
+                </button>
             </div>
 
-            <!-- MANDATORY LEFT THUMB REST ZONE (Enlarged Height) -->
-            <div class="mt-3 shrink-0 h-40 border-2 border-dashed border-amber-500/60 bg-amber-950/40 rounded-2xl flex flex-col items-center justify-center text-amber-300 select-none pointer-events-none p-3 text-center shadow-inner">
+            <!-- Category List (6 items per page) -->
+            <div id="category-container" class="flex-1 flex flex-col gap-2 overflow-hidden justify-start">
+                <!-- Categories rendered dynamically by JavaScript -->
+            </div>
+
+            <!-- ONLY Left Thumb Rest Zone (Bottom of Sidebar, Heightened) -->
+            <div class="h-36 bg-amber-950/30 border-2 border-dashed border-amber-500/50 rounded-2xl flex flex-col items-center justify-center text-amber-400 select-none pointer-events-none p-2 text-center shadow-inner shrink-0">
                 <span class="text-3xl mb-1">🖐️</span>
-                <span class="text-base font-extrabold leading-snug">左手大拇指<br>休息區</span>
+                <span class="text-base font-bold leading-tight">左手大拇指<br>休息區</span>
             </div>
-        </aside>
+        </div>
 
-        <!-- Right Main Grid Display: 3 Columns x 4 Rows Layout -->
-        <section id="main-view-container" class="flex-1 relative bg-slate-900/60 rounded-3xl p-3 border border-slate-800 overflow-hidden h-full flex flex-col justify-between">
-            <!-- Grid content rendered dynamically -->
-        </section>
+        <!-- Right Main View: 3x5 Words Grid / Body Diagram / Symptom Sub-menu -->
+        <div id="main-view-container" class="flex-1 relative bg-slate-900/60 rounded-3xl p-3 border border-slate-700/80 overflow-hidden">
+            <!-- Dynamically populated: 3x5 Word Grid, Interactive Body Map, or Symptom Grid -->
+        </div>
 
-    </main>
+    </div>
 
     <!-- UI Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-lg font-bold shadow-2xl opacity-0 pointer-events-none z-50 transform translate-y-4">
+    <div id="toast" class="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-xl font-bold shadow-2xl opacity-0 pointer-events-none z-50 transform translate-y-4 transition-all">
         <span id="toast-msg">通知</span>
     </div>
 
     <script>
-        // Vocabulary Database
+        // Vocabulary dataset categorized logically
         const defaultVocabulary = {
             "最常用": [],
             "身體": [],
-            "感受": ["開心", "傷心", "嬲", "驚", "好悶", "舒服", "辛苦", "擔心", "緊張", "放鬆"],
-            "日常": ["你好", "謝謝", "對不起", "早晨", "早唞", "好", "唔好", "唔該", "不知道", "等等", "請幫忙", "係"],
-            "飲食": ["想飲水", "想飲藥", "想食飯", "太熱", "太凍", "想食粥", "想喝湯", "太甜", "太鹹", "飽啦", "未飽", "擦嘴", "拿杯", "牙籤"],
-            "護理": ["去厠所", "刷牙", "棉花棒", "眼淚", "鼻水"],
-            "數字": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "十", "百"],
-            "環境": ["開燈", "關燈", "開電視", "關電視", "開冷氣", "關冷氣", "太嘈", "太靜", "開窗", "關窗"],
-            "人物": ["老公", "Dewi", "文翔", "文彥", "文彬", "文青", "Tammy", "高翔", "嘉曼", "嘉裕", "婷婷", "司農", "司直", "司南", "司辰", "心心", "仔女", "醫生", "護士", "家人", "朋友"]
+            "日常": ["你好", "謝謝", "對不起", "早晨", "早唞", "好", "唔好", "唔該", "不知道", "等等", "請幫忙", "係", "拜拜", "多謝", "要", "唔要", "再見", "麻煩你", "同埋", "另外", "幾時", "邊個", "點解", "邊度", "好呀", "有", "冇", "行啦"],
+            "人物": ["老公", "Dewi", "文翔", "文彥", "文彬", "文青", "Tammy", "高翔", "嘉曼", "嘉裕", "婷婷", "司農", "司直", "司南", "司辰", "心心", "仔女", "醫生", "護士", "家人", "朋友"],
+            "飲食": ["想飲水", "想飲藥", "想食飯", "太熱", "太凍", "想食粥", "想喝湯", "太甜", "太鹹", "飽啦", "未飽", "擦嘴", "牙籤", "食水果", "飲果汁", "食餅乾", "喝奶", "要吸管", "太硬", "太軟", "想嘔", "好渴"],
+            "護理": ["去厠所", "刷牙", "棉花棒", "眼淚", "鼻水", "洗臉", "洗澡", "換衫", "剪指甲", "洗頭", "擦身", "拍背", "抽痰", "戴眼鏡", "按摩", "量血壓"],
+            "感受": ["開心", "傷心", "嬲", "驚", "好悶", "舒服", "辛苦", "擔心", "緊張", "放鬆", "累", "攰", "痛", "凍", "熱", "攰啦", "不安", "孤單", "感謝"],
+            "數字": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "十", "百", "千", "萬", "第一", "第二", "一半", "全部"],
+            "環境": ["開燈", "關燈", "開電視", "關電視", "開冷氣", "關冷氣", "太嘈", "太靜", "開窗", "關窗", "開風扇", "關風扇", "拉窗簾", "開電視", "調高音量", "調低音量", "轉台", "上床", "落床"]
         };
 
-        // Body Symptoms Database
-        const bodySymptomsData = {
-            "頭部": ["頭痛", "頭暈", "痕癢", "麻痺", "發熱", "壓迫感", "抽筋", "痛", "神智不清"],
-            "頸部": ["頸痛", "喉嚨痛", "吞嚥困難", "轉動困難", "僵硬", "抽筋", "痕癢", "痰多", "喘氣"],
-            "胸部": ["胸悶", "心口痛", "呼吸困難", "心跳快", "咳嗽", "壓迫感", "痛", "喘氣"],
-            "腹部": ["肚痛", "肚脹", "胃痛", "想嘔", "肚瀉", "抽筋", "便秘", "消化不良"],
-            "手部": ["手痛", "手軟", "手麻痺", "手抽筋", "手震", "無力", "關節痛", "腫脹"],
-            "背部": ["背痛", "腰背痛", "背部僵硬", "酸痛", "壓迫感", "痕癢", "冷感", "抽筋"],
-            "腰部": ["腰痛", "腰酸", "扭傷感", "僵硬", "無力", "麻痺", "抽筋", "刺痛"],
-            "腳部": ["腳痛", "腳軟", "腳腫", "腳麻痺", "腳抽筋", "無力", "關節痛", "冷冰冰"]
-        };
-
-        // Button Color Themes
-        const pastelColors = [
-            'bg-sky-200 text-sky-950 hover:bg-sky-100',
-            'bg-emerald-200 text-emerald-950 hover:bg-emerald-100',
-            'bg-amber-200 text-amber-950 hover:bg-amber-100',
-            'bg-purple-200 text-purple-950 hover:bg-purple-100',
-            'bg-rose-200 text-rose-950 hover:bg-rose-100',
-            'bg-teal-200 text-teal-950 hover:bg-teal-100',
-            'bg-indigo-200 text-indigo-950 hover:bg-indigo-100',
-            'bg-fuchsia-200 text-fuchsia-950 hover:bg-fuchsia-100'
+        // Specific Category Pages Configuration (6 categories per page)
+        const categoryPages = [
+            [
+                { name: '最常用', icon: '⭐' },
+                { name: '身體', icon: '🧍' },
+                { name: '日常', icon: '💬' },
+                { name: '人物', icon: '👥' },
+                { name: '飲食', icon: '☕' },
+                { name: '護理', icon: '🩺' }
+            ],
+            [
+                { name: '感受', icon: '❤️' },
+                { name: '數字', icon: '🔢' },
+                { name: '環境', icon: '🏠' }
+            ]
         ];
 
+        // Specific Symptoms Sub-menu Data
+        const bodySymptomsData = {
+            "頭部": ["頭痛", "頭暈", "痕癢", "麻痺", "發熱", "壓迫感", "抽筋", "痛", "神智不清", "眼睛乾", "耳鳴", "鼻塞"],
+            "頸部": ["頸痛", "喉嚨痛", "吞嚥困難", "轉動困難", "僵硬", "抽筋", "痕癢", "痰多", "喘氣", "咳嗽"],
+            "胸部": ["胸悶", "心口痛", "呼吸困難", "心跳快", "咳嗽", "壓迫感", "痛", "喘氣", "悶痛"],
+            "腹部": ["肚痛", "肚脹", "胃痛", "想嘔", "肚瀉", "抽筋", "便秘", "消化不良", "反胃"],
+            "手部": ["手痛", "手軟", "手麻痺", "手抽筋", "手震", "無力", "關節痛", "腫脹", "手指痛"],
+            "背部": ["背痛", "腰背痛", "背部僵硬", "酸痛", "壓迫感", "痕癢", "冷感", "抽筋"],
+            "腰部": ["腰痛", "腰酸", "扭傷感", "僵硬", "無力", "麻痺", "抽筋", "刺痛"],
+            "腳部": ["腳痛", "腳軟", "腳腫", "腳麻痺", "腳抽筋", "無力", "關節痛", "冷冰冰", "腳趾痛"]
+        };
+
+        // Pastel button colors for visual contrast and low eye strain
+        const pastelColors = [
+            'bg-sky-200 text-sky-950 hover:bg-sky-300',
+            'bg-emerald-200 text-emerald-950 hover:bg-emerald-300',
+            'bg-amber-200 text-amber-950 hover:bg-amber-300',
+            'bg-purple-200 text-purple-950 hover:bg-purple-300',
+            'bg-rose-200 text-rose-950 hover:bg-rose-300',
+            'bg-teal-200 text-teal-950 hover:bg-teal-300',
+            'bg-indigo-200 text-indigo-950 hover:bg-indigo-300',
+            'bg-fuchsia-200 text-fuchsia-950 hover:bg-fuchsia-300',
+            'bg-lime-200 text-lime-950 hover:bg-lime-300',
+            'bg-cyan-200 text-cyan-950 hover:bg-cyan-300'
+        ];
+
+        // Application State
         let vocabulary = defaultVocabulary;
         let usageStats = {};
+        let currentCategoryPage = 0; // 0 = Page 1 (6 categories), 1 = Page 2 (3 categories)
         let currentCategory = '最常用';
-        let currentBodyPart = null;
-        
-        // Category Pagination (Sidebar)
-        let currentCategoryPage = 0;
-        const categoriesPerPage = 4;
-
-        // Word Grid Pagination (Now 10 words per page!)
-        let currentWordPage = 0;
-        const wordsPerPage = 10; 
-
-        let isImmediateMode = false;
+        let currentBodyPart = null; // Used when inside "身體" sub-menu
+        let currentPage = 0; // Grid pagination page
+        let isImmediateMode = false; // false = Sentence Builder, true = Immediate Speech
         let currentSentence = [];
 
         function init() {
+            // Load usage statistics from LocalStorage
             const savedStats = localStorage.getItem('aac_usageStats');
             usageStats = savedStats ? JSON.parse(savedStats) : {};
 
+            // Pre-warm SpeechSynthesis voices
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.getVoices();
                 window.speechSynthesis.onvoiceschanged = () => {
@@ -201,7 +217,7 @@
 
         function getFrequentWords() {
             return Object.entries(usageStats)
-                .sort((a, b) => b[1] - a[1])
+                .sort((a, b) => b[1] - a[1]) // Sort descending by usage count
                 .map(item => item[0]);
         }
 
@@ -213,12 +229,14 @@
                 return;
             }
 
+            // Cancel any current playing audio
             window.speechSynthesis.cancel();
 
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-HK';
-            utterance.rate = 0.88;
+            utterance.lang = 'zh-HK'; // Cantonese locale
+            utterance.rate = 0.88;    // Deliberate pace for clear articulation
 
+            // Attempt to select explicit Cantonese (Hong Kong) voice
             const voices = window.speechSynthesis.getVoices();
             const hkVoice = voices.find(v => v.lang.includes('zh-HK') || v.lang.includes('yue') || v.lang.includes('zh-MYS'));
             if (hkVoice) {
@@ -237,71 +255,70 @@
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
                 toast.classList.remove('opacity-100', 'translate-y-0');
-            }, 2500);
+            }, 2200);
         }
 
         function updateSentenceDisplay() {
             const elDisplay = document.getElementById('sentence-display');
             elDisplay.innerText = currentSentence.join(' ');
+            // Auto scroll display bar to the right
             elDisplay.scrollLeft = elDisplay.scrollWidth;
+        }
+
+        function changeCategoryPage(dir) {
+            const maxPages = categoryPages.length;
+            const newPage = currentCategoryPage + dir;
+            if (newPage >= 0 && newPage < maxPages) {
+                currentCategoryPage = newPage;
+                renderCategories();
+            }
         }
 
         function renderCategories() {
             const container = document.getElementById('category-container');
             container.innerHTML = '';
 
-            const allCategories = ['最常用', '身體', '感受', '日常', '飲食', '護理', '數字', '環境', '人物'];
-            const totalPages = Math.ceil(allCategories.length / categoriesPerPage);
-            
-            const startIndex = currentCategoryPage * categoriesPerPage;
-            const pageCategories = allCategories.slice(startIndex, startIndex + categoriesPerPage);
+            // Update sidebar pagination button states
+            document.getElementById('btn-cat-prev').disabled = (currentCategoryPage === 0);
+            document.getElementById('btn-cat-next').disabled = (currentCategoryPage >= categoryPages.length - 1);
 
-            pageCategories.forEach(cat => {
+            const activeCategoryList = categoryPages[currentCategoryPage];
+
+            activeCategoryList.forEach(item => {
+                const cat = item.name;
+                const icon = item.icon;
                 const isSelected = cat === currentCategory;
                 const btn = document.createElement('button');
                 
                 let bgStyle = isSelected 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 scale-[1.02]' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 scale-[1.01]' 
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700';
                 
                 if (cat === '身體') {
                     bgStyle = isSelected 
-                        ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/50 scale-[1.02]' 
+                        ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/50 scale-[1.01]' 
                         : 'bg-amber-950/60 text-amber-200 border border-amber-600/40 hover:bg-amber-900/80';
                 }
 
-                btn.className = `w-full text-left px-4 py-3.5 rounded-2xl text-xl font-bold btn-press transition-all flex items-center justify-between shrink-0 ${bgStyle}`;
-                
-                let icon = '📁';
-                if (cat === '最常用') icon = '⭐';
-                if (cat === '身體') icon = '🧍';
-                if (cat === '感受') icon = '❤️';
-                if (cat === '日常') icon = '💬';
-                if (cat === '飲食') icon = '🍚';
-                if (cat === '護理') icon = '🧼';
-                if (cat === '數字') icon = '🔢';
-                if (cat === '環境') icon = '🏠';
-                if (cat === '人物') icon = '👥';
-
+                btn.className = `w-full flex-1 px-4 rounded-2xl text-xl font-bold btn-press transition-all flex items-center justify-between border border-slate-700/50 ${bgStyle}`;
                 btn.innerHTML = `<span>${icon} ${cat}</span>`;
                 btn.onclick = () => {
                     currentCategory = cat;
-                    currentBodyPart = null;
-                    currentWordPage = 0;
+                    currentBodyPart = null; // Reset body part state
+                    currentPage = 0;
                     renderCategories();
                     renderMainView();
                 };
                 container.appendChild(btn);
             });
 
-            document.getElementById('btn-cat-prev').disabled = (currentCategoryPage === 0);
-            document.getElementById('btn-cat-next').disabled = (currentCategoryPage >= totalPages - 1);
+            // Fill empty slots if on page 2 to preserve consistent sizing
+            for (let i = activeCategoryList.length; i < 6; i++) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'w-full flex-1 border border-slate-800/30 rounded-2xl opacity-20 bg-slate-900/20';
+                container.appendChild(placeholder);
+            }
         }
-
-        window.changeCategoryPage = function(dir) {
-            currentCategoryPage += dir;
-            renderCategories();
-        };
 
         function renderMainView() {
             const container = document.getElementById('main-view-container');
@@ -323,21 +340,24 @@
                 ? getFrequentWords() 
                 : (vocabulary[currentCategory] || []);
 
-            // 3 Columns x 4 Rows Architecture:
-            // - Words 1..9 in Rows 1..3 (Slots 0..8)
-            // - Row 4 Col 1 (Slot 9): Left Thumb Rest Zone
-            // - Row 4 Col 2 (Slot 10): Word 10
-            // - Row 4 Col 3 (Slot 11): Combined Pagination Cell (◀ 上一頁 + 下一頁 ▶)
-            const maxWordsPerPage = 10;
-            const totalPages = Math.max(1, Math.ceil(words.length / maxWordsPerPage));
-            const startIndex = currentWordPage * maxWordsPerPage;
-            const currentWords = words.slice(startIndex, startIndex + maxWordsPerPage);
+            // Grid format: 3 columns x 5 rows = 15 total cells
+            // Cells 0 through 13 (14 slots): Words
+            // Cell 14 (Bottom Right - Row 5 Col 3): Merged Pagination Box (◀ 上頁 | 下頁 ▶)
+            const slotsPerPage = 14; 
+            const totalPages = Math.max(1, Math.ceil(words.length / slotsPerPage));
+            
+            // Adjust page index if out of bounds
+            if (currentPage >= totalPages) currentPage = totalPages - 1;
+            if (currentPage < 0) currentPage = 0;
+
+            const startIndex = currentPage * slotsPerPage;
+            const currentWords = words.slice(startIndex, startIndex + slotsPerPage);
 
             const gridWrapper = document.createElement('div');
-            gridWrapper.className = 'w-full h-full grid grid-cols-3 grid-rows-4-strict gap-3';
+            gridWrapper.className = 'w-full h-full grid grid-cols-3 grid-rows-5 gap-3';
 
-            // Populate Slots 0..8 (Rows 1..3)
-            for (let i = 0; i < 9; i++) {
+            // 1. Render 14 Word Slots
+            for (let i = 0; i < 14; i++) {
                 const cellDiv = document.createElement('div');
                 cellDiv.className = 'w-full h-full';
 
@@ -345,60 +365,38 @@
                     const word = currentWords[i];
                     const colorClass = pastelColors[(startIndex + i) % pastelColors.length];
                     cellDiv.innerHTML = `
-                        <button onclick="handleWordClick('${word}')" class="w-full h-full ${colorClass} rounded-2xl text-3xl font-extrabold shadow-md btn-press flex items-center justify-center p-2 text-center leading-snug break-words">
+                        <button onclick="handleWordClick('${word}')" class="w-full h-full ${colorClass} rounded-2xl text-2xl font-extrabold shadow-md btn-press flex items-center justify-center p-2 text-center leading-snug break-words border border-white/20">
                             ${word}
                         </button>
                     `;
                 } else {
-                    cellDiv.innerHTML = `<div class="w-full h-full bg-slate-800/20 rounded-2xl border border-slate-800/40"></div>`;
+                    // Empty cell placeholder
+                    cellDiv.innerHTML = `<div class="w-full h-full bg-slate-800/20 rounded-2xl border border-slate-800/30"></div>`;
                 }
                 gridWrapper.appendChild(cellDiv);
             }
 
-            // Row 4 Col 1 (Slot 9): Main Grid Left Thumb Rest Zone
-            const mainThumbRestCell = document.createElement('div');
-            mainThumbRestCell.className = 'w-full h-full border-2 border-dashed border-amber-500/50 bg-amber-950/30 rounded-2xl flex flex-col items-center justify-center text-amber-300 select-none pointer-events-none p-2 text-center shadow-inner';
-            mainThumbRestCell.innerHTML = `
-                <span class="text-2xl mb-1">🖐️</span>
-                <span class="text-sm font-extrabold leading-tight">左手大拇指<br>休息區</span>
-            `;
-            gridWrapper.appendChild(mainThumbRestCell);
-
-            // Row 4 Col 2 (Slot 10): Word #10 Slot
-            const word10Cell = document.createElement('div');
-            word10Cell.className = 'w-full h-full';
-            if (currentWords.length >= 10) {
-                const word10 = currentWords[9];
-                const colorClass = pastelColors[(startIndex + 9) % pastelColors.length];
-                word10Cell.innerHTML = `
-                    <button onclick="handleWordClick('${word10}')" class="w-full h-full ${colorClass} rounded-2xl text-3xl font-extrabold shadow-md btn-press flex items-center justify-center p-2 text-center leading-snug break-words">
-                        ${word10}
+            // 2. Render Cell 15 (Row 5 Col 3 - Bottom Right): Merged Pagination Box
+            const paginationCell = document.createElement('div');
+            paginationCell.className = 'w-full h-full';
+            paginationCell.innerHTML = `
+                <div class="w-full h-full bg-slate-800/90 border border-slate-600 rounded-2xl p-1.5 flex gap-2 items-center justify-between shadow-lg">
+                    <button onclick="changePage(-1)" ${currentPage === 0 ? 'disabled' : ''} class="flex-1 h-full bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-xl font-bold text-xl flex items-center justify-center btn-press disabled:opacity-25 disabled:pointer-events-none">
+                        ◀ 上頁
                     </button>
-                `;
-            } else {
-                word10Cell.innerHTML = `<div class="w-full h-full bg-slate-800/20 rounded-2xl border border-slate-800/40"></div>`;
-            }
-            gridWrapper.appendChild(word10Cell);
-
-            // Row 4 Col 3 (Slot 11): Combined Pagination Box containing both Previous & Next buttons
-            const combinedPaginationCell = document.createElement('div');
-            combinedPaginationCell.className = 'w-full h-full grid grid-cols-2 gap-2 bg-slate-900/80 p-1 rounded-2xl border border-slate-800 shadow-inner';
-            combinedPaginationCell.innerHTML = `
-                <button onclick="changeWordPage(-1)" class="w-full h-full bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-lg font-bold btn-press shadow flex items-center justify-center border border-slate-700 disabled:opacity-30 disabled:pointer-events-none" ${currentWordPage === 0 ? 'disabled' : ''}>
-                    ◀ 上頁
-                </button>
-                <button onclick="changeWordPage(1)" class="w-full h-full bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-lg font-bold btn-press shadow flex items-center justify-center border border-slate-700 disabled:opacity-30 disabled:pointer-events-none" ${currentWordPage >= totalPages - 1 ? 'disabled' : ''}>
-                    下頁 ▶
-                </button>
+                    <button onclick="changePage(1)" ${currentPage >= totalPages - 1 ? 'disabled' : ''} class="flex-1 h-full bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-xl font-bold text-xl flex items-center justify-center btn-press disabled:opacity-25 disabled:pointer-events-none">
+                        下頁 ▶
+                    </button>
+                </div>
             `;
-            gridWrapper.appendChild(combinedPaginationCell);
+            gridWrapper.appendChild(paginationCell);
 
             container.appendChild(gridWrapper);
         }
 
         function renderBodyMap(container) {
             const mapWrapper = document.createElement('div');
-            mapWrapper.className = 'w-full h-full grid grid-cols-3 grid-rows-4-strict gap-3';
+            mapWrapper.className = 'w-full h-full flex gap-3 relative';
 
             const bodyPartsList = [
                 { name: '頭部', icon: '🗣️' },
@@ -411,19 +409,20 @@
                 { name: '腳部', icon: '🦶' }
             ];
 
-            const bodySvgHTML = `
-                <div class="col-span-2 row-span-4 w-full h-full bg-slate-950/80 rounded-2xl border border-slate-800 p-2 flex flex-col justify-between items-center relative overflow-hidden">
+            mapWrapper.innerHTML = `
+                <!-- Left: Interactive Dual View SVG Diagram -->
+                <div class="flex-1 bg-slate-950/80 rounded-2xl border border-slate-700 p-3 flex flex-col justify-between items-center relative overflow-hidden">
                     <div class="text-amber-300 text-base font-bold flex items-center gap-2">
-                        <span>🧍 點擊圖中身體部位或右側按鈕</span>
+                        <span>🧍 請點擊身體部位或右側按鈕</span>
                     </div>
                     
                     <div class="flex-1 w-full flex justify-around items-center gap-2 my-1">
-                        <!-- Front View SVG -->
-                        <div class="h-full flex flex-col items-center">
+                        <!-- Front View -->
+                        <div class="h-full flex flex-col items-center justify-center">
                             <span class="text-xs text-slate-400 font-bold mb-1">【 正面 】</span>
-                            <svg viewBox="0 0 100 200" class="h-full max-h-[220px] w-auto">
+                            <svg viewBox="0 0 100 200" class="h-full max-h-[260px] w-auto">
                                 <circle cx="50" cy="25" r="18" class="body-part-path" onclick="selectBodyPart('頭部')"/>
-                                <text x="50" y="27" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="bold" pointer-events="none">頭</text>
+                                <text x="50" y="28" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="bold" pointer-events="none">頭</text>
                                 
                                 <rect x="42" y="44" width="16" height="12" rx="3" class="body-part-path" onclick="selectBodyPart('頸部')"/>
                                 
@@ -431,7 +430,7 @@
                                 <text x="50" y="76" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold" pointer-events="none">胸</text>
 
                                 <rect x="32" y="90" width="36" height="30" rx="5" class="body-part-path" onclick="selectBodyPart('腹部')"/>
-                                <text x="50" y="108" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold" pointer-events="none">腹</text>
+                                <text x="50" y="108" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold" pointer-events="none">腹/肚</text>
 
                                 <path d="M 12 60 Q 25 58 28 62 L 25 120 Q 15 120 12 115 Z" class="body-part-path" onclick="selectBodyPart('手部')"/>
                                 <path d="M 88 60 Q 75 58 72 62 L 75 120 Q 85 120 88 115 Z" class="body-part-path" onclick="selectBodyPart('手部')"/>
@@ -443,10 +442,10 @@
                             </svg>
                         </div>
 
-                        <!-- Back View SVG -->
-                        <div class="h-full flex flex-col items-center">
+                        <!-- Back View -->
+                        <div class="h-full flex flex-col items-center justify-center">
                             <span class="text-xs text-slate-400 font-bold mb-1">【 背面 】</span>
-                            <svg viewBox="0 0 100 200" class="h-full max-h-[220px] w-auto">
+                            <svg viewBox="0 0 100 200" class="h-full max-h-[260px] w-auto">
                                 <circle cx="50" cy="25" r="18" class="body-part-path" onclick="selectBodyPart('頭部')"/>
                                 
                                 <rect x="42" y="44" width="16" height="12" rx="3" class="body-part-path" onclick="selectBodyPart('頸部')"/>
@@ -466,44 +465,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Right: Quick Region Buttons Grid -->
+                <div class="w-1/2 grid grid-cols-2 grid-rows-4 gap-3">
+                    ${bodyPartsList.map(part => `
+                        <button onclick="selectBodyPart('${part.name}')" class="w-full h-full bg-gradient-to-br from-amber-200 to-amber-300 text-amber-950 rounded-2xl font-extrabold shadow-lg btn-press flex items-center justify-center gap-3 text-2xl border border-amber-400">
+                            <span class="text-3xl">${part.icon}</span>
+                            <span>${part.name}</span>
+                        </button>
+                    `).join('')}
+                </div>
             `;
 
-            mapWrapper.innerHTML = bodySvgHTML;
-
-            const rightColumnBtns = document.createElement('div');
-            rightColumnBtns.className = 'col-span-1 row-span-4 grid grid-rows-4 gap-2 h-full';
-
-            for (let r = 0; r < 4; r++) {
-                const rowCell = document.createElement('div');
-                rowCell.className = 'grid grid-cols-2 gap-2 h-full';
-
-                const p1 = bodyPartsList[r * 2];
-                const p2 = bodyPartsList[r * 2 + 1];
-
-                rowCell.innerHTML = `
-                    <button onclick="selectBodyPart('${p1.name}')" class="w-full h-full bg-gradient-to-br from-amber-200 to-amber-300 text-amber-950 rounded-2xl font-extrabold shadow-md btn-press flex flex-col items-center justify-center p-1 border border-amber-400">
-                        <span class="text-xl">${p1.icon}</span>
-                        <span class="text-sm">${p1.name}</span>
-                    </button>
-                    <button onclick="selectBodyPart('${p2.name}')" class="w-full h-full bg-gradient-to-br from-amber-200 to-amber-300 text-amber-950 rounded-2xl font-extrabold shadow-md btn-press flex flex-col items-center justify-center p-1 border border-amber-400">
-                        <span class="text-xl">${p2.icon}</span>
-                        <span class="text-sm">${p2.name}</span>
-                    </button>
-                `;
-                rightColumnBtns.appendChild(rowCell);
-            }
-
-            mapWrapper.appendChild(rightColumnBtns);
             container.appendChild(mapWrapper);
         }
 
         function renderSymptomGrid(container, bodyPart) {
             const symptoms = bodySymptomsData[bodyPart] || ["不舒服", "痛", "麻痺", "抽筋", "腫脹", "痕癢"];
 
+            // Render in 3x5 Grid format
+            // Slots 0 to 13: Symptom buttons
+            // Slot 14 (Bottom Right - Cell 15): Merged Control (Back to Body Map | Return to Categories)
             const gridWrapper = document.createElement('div');
-            gridWrapper.className = 'w-full h-full grid grid-cols-3 grid-rows-4-strict gap-3';
+            gridWrapper.className = 'w-full h-full grid grid-cols-3 grid-rows-5 gap-3';
 
-            for (let i = 0; i < 9; i++) {
+            for (let i = 0; i < 14; i++) {
                 const cellDiv = document.createElement('div');
                 cellDiv.className = 'w-full h-full';
 
@@ -511,45 +497,27 @@
                     const symptom = symptoms[i];
                     const fullPhrase = symptom.includes(bodyPart) ? symptom : `${bodyPart}${symptom}`;
                     cellDiv.innerHTML = `
-                        <button onclick="handleWordClick('${fullPhrase}')" class="w-full h-full bg-rose-200 text-rose-950 hover:bg-rose-100 rounded-2xl text-2xl font-extrabold shadow-md btn-press flex items-center justify-center p-2 text-center leading-tight">
+                        <button onclick="handleWordClick('${fullPhrase}')" class="w-full h-full bg-rose-200 text-rose-950 rounded-2xl text-2xl font-extrabold shadow-md btn-press flex items-center justify-center p-2 text-center leading-tight hover:bg-rose-300 border border-rose-300">
                             ${symptom}
                         </button>
                     `;
                 } else {
-                    cellDiv.innerHTML = `<div class="w-full h-full bg-slate-800/20 rounded-2xl border border-slate-800/40"></div>`;
+                    cellDiv.innerHTML = `<div class="w-full h-full bg-slate-800/20 rounded-2xl border border-slate-800/30"></div>`;
                 }
                 gridWrapper.appendChild(cellDiv);
             }
 
-            // Row 4 Col 1: Thumb Rest Zone
-            const mainThumbRestCell = document.createElement('div');
-            mainThumbRestCell.className = 'w-full h-full border-2 border-dashed border-amber-500/50 bg-amber-950/30 rounded-2xl flex flex-col items-center justify-center text-amber-300 select-none pointer-events-none p-2 text-center shadow-inner';
-            mainThumbRestCell.innerHTML = `
-                <span class="text-2xl mb-1">🖐️</span>
-                <span class="text-sm font-extrabold leading-tight">左手大拇指<br>休息區</span>
+            // Cell 15 (Row 5 Col 3): Merged Control Box
+            const controlCell = document.createElement('div');
+            controlCell.className = 'w-full h-full';
+            controlCell.innerHTML = `
+                <div class="w-full h-full bg-amber-950/80 border border-amber-600/60 rounded-2xl p-1.5 flex gap-2 items-center justify-between shadow-lg">
+                    <button onclick="backToBodyMap()" class="flex-1 h-full bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-lg flex items-center justify-center btn-press">
+                        ‹ 返回人體圖
+                    </button>
+                </div>
             `;
-
-            // Row 4 Col 2: Back to body map
-            const backBtnCell = document.createElement('div');
-            backBtnCell.className = 'w-full h-full';
-            backBtnCell.innerHTML = `
-                <button onclick="backToBodyMap()" class="w-full h-full bg-amber-600 hover:bg-amber-500 text-white rounded-2xl text-lg font-bold btn-press shadow flex items-center justify-center border border-amber-400">
-                    ‹ 返回人體圖
-                </button>
-            `;
-
-            // Row 4 Col 3: Back to home categories
-            const homeBtnCell = document.createElement('div');
-            homeBtnCell.className = 'w-full h-full';
-            homeBtnCell.innerHTML = `
-                <button onclick="backToCategories()" class="w-full h-full bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl text-lg font-bold btn-press shadow border border-slate-700 flex items-center justify-center">
-                    🏠 返回主目錄
-                </button>
-            `;
-
-            gridWrapper.appendChild(mainThumbRestCell);
-            gridWrapper.appendChild(backBtnCell);
-            gridWrapper.appendChild(homeBtnCell);
+            gridWrapper.appendChild(controlCell);
 
             container.appendChild(gridWrapper);
         }
@@ -564,53 +532,51 @@
             renderMainView();
         };
 
-        window.backToCategories = function() {
-            currentCategory = '感受';
-            currentBodyPart = null;
-            currentWordPage = 0;
-            renderCategories();
-            renderMainView();
-        };
-
         window.handleWordClick = function(word) {
             trackUsage(word);
 
             if (isImmediateMode) {
+                // Immediate Speech Mode
                 document.getElementById('sentence-display').innerText = word;
                 speakText(word);
             } else {
+                // Sentence Builder Mode
                 currentSentence.push(word);
                 updateSentenceDisplay();
             }
 
+            // If in "最常用" category, dynamically update usage rankings
             if (currentCategory === '最常用') {
                 renderStandardGrid(document.getElementById('main-view-container'));
             }
         };
 
-        window.changeWordPage = function(dir) {
-            currentWordPage += dir;
+        window.changePage = function(direction) {
+            currentPage += direction;
             renderMainView();
         };
 
         function bindGlobalEvents() {
+            // Mode Toggle Switch
             const btnModeToggle = document.getElementById('btn-mode-toggle');
 
             btnModeToggle.addEventListener('click', () => {
                 isImmediateMode = !isImmediateMode;
                 if (isImmediateMode) {
                     btnModeToggle.innerHTML = '⚡ 即時發音模式';
-                    btnModeToggle.className = 'h-14 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-lg font-bold btn-press shadow-md transition-colors flex items-center gap-2 shrink-0';
+                    btnModeToggle.className = 'bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-3 rounded-2xl text-lg font-bold btn-press shadow-md transition-colors whitespace-nowrap flex items-center gap-2';
                     showToast('已切換至：即時發音模式 ⚡');
                 } else {
                     btnModeToggle.innerHTML = '📝 句子組合模式';
-                    btnModeToggle.className = 'h-14 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-lg font-bold btn-press shadow-md transition-colors flex items-center gap-2 shrink-0';
+                    btnModeToggle.className = 'bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-2xl text-lg font-bold btn-press shadow-md transition-colors whitespace-nowrap flex items-center gap-2';
                     showToast('已切換至：句子組合模式 📝');
                 }
             });
 
+            // Action: Play / Speak Sentence
             document.getElementById('btn-play').addEventListener('click', () => {
                 if (currentSentence.length > 0) {
+                    // Combine phrases with commas for natural Cantonese cadence
                     speakText(currentSentence.join('，'));
                 } else {
                     const text = document.getElementById('sentence-display').innerText;
@@ -622,6 +588,7 @@
                 }
             });
 
+            // Action: Backspace
             document.getElementById('btn-backspace').addEventListener('click', () => {
                 if (currentSentence.length > 0) {
                     currentSentence.pop();
@@ -631,6 +598,7 @@
                 }
             });
 
+            // Action: Clear
             document.getElementById('btn-clear').addEventListener('click', () => {
                 currentSentence = [];
                 updateSentenceDisplay();
